@@ -81,11 +81,21 @@ def process_invoices():
             # Check if any files were processed successfully
             if result.successful == 0:
                 logger.error('All files failed to process')
-                raise APIError(
-                    f'All {result.total} files failed to process',
-                    status_code=400,
-                    error_code='ALL_FILES_FAILED'
-                )
+
+                # Log detailed failure information
+                for failure in result.failures:
+                    logger.error(f'  - {failure.filename}: {failure.error}')
+
+                # Return detailed error with failure information
+                error_response = {
+                    'success': False,
+                    'error': {
+                        'code': 'ALL_FILES_FAILED',
+                        'message': f'All {result.total} files failed to process'
+                    },
+                    'failures': [f.to_dict() for f in result.failures]
+                }
+                return jsonify(error_response), 400
 
             # Read Excel file into memory before temp dir cleanup
             # This prevents Windows file locking issues
