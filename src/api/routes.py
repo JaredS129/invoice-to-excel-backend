@@ -87,19 +87,10 @@ def process_invoices():
                     error_code='ALL_FILES_FAILED'
                 )
 
-            # Return Excel file with processing summary header
-            response = send_file(
-                output_excel,
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                as_attachment=True,
-                download_name='invoices_output.xlsx'
-            )
-
-            # Add processing summary header
-            response.headers['X-Processing-Summary'] = result.to_summary_json()
-
-            logger.info('Successfully sent Excel response')
-            return response
+            # Read Excel file into memory before temp dir cleanup
+            # This prevents Windows file locking issues
+            with open(output_excel, 'rb') as f:
+                excel_data = f.read()
 
         except APIError:
             # Re-raise API errors
@@ -111,3 +102,18 @@ def process_invoices():
                 status_code=500,
                 error_code='INTERNAL_ERROR'
             )
+
+    # Send file from memory (after temp dir is cleaned up)
+    from io import BytesIO
+    response = send_file(
+        BytesIO(excel_data),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='invoices_output.xlsx'
+    )
+
+    # Add processing summary header
+    response.headers['X-Processing-Summary'] = result.to_summary_json()
+
+    logger.info('Successfully sent Excel response')
+    return response
