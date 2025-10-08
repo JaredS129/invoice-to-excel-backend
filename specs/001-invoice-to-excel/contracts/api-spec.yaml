@@ -1,0 +1,297 @@
+openapi: 3.0.3
+info:
+  title: Invoice Processing API
+  description: |
+    REST API for batch processing of advertising platform invoices.
+
+    Supports 5 invoice types:
+    - DV360 (Display & Video 360)
+    - Google Ads
+    - Campaign Manager 360 (CM360)
+    - Google VAT
+    - Meta (Facebook/Instagram)
+
+    Accepts batches of PDF files and returns a consolidated Excel workbook.
+  version: 1.0.0
+  contact:
+    name: Invoice Processing API Support
+
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+  - url: http://localhost:5000/api
+    description: API base path
+
+tags:
+  - name: processing
+    description: Invoice processing operations
+
+paths:
+  /api/process:
+    post:
+      tags:
+        - processing
+      summary: Process batch of invoice PDFs
+      description: |
+        Accepts multiple PDF invoice files, detects their types automatically,
+        extracts data, and returns a consolidated Excel workbook.
+
+        **Processing Steps**:
+        1. Validate uploaded files (type, size, count)
+        2. Detect invoice type for each PDF
+        3. Extract structured data using type-specific extractors
+        4. Generate Excel workbook with one sheet per invoice type
+        5. Return Excel file for download
+
+        **Limitations**:
+        - Maximum 100 files per request
+        - Each file must be ≤ 10MB
+        - Total request size ≤ 100MB
+        - Processing timeout: 5 minutes
+      operationId: processInvoices
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - invoices
+              properties:
+                invoices:
+                  type: array
+                  description: PDF invoice files to process
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              invoices:
+                contentType: application/pdf
+      responses:
+        '200':
+          description: |
+            Processing completed successfully. At least one invoice was processed.
+
+            Returns Excel file as binary stream. Processing summary included in
+            `X-Processing-Summary` header.
+          headers:
+            Content-Disposition:
+              description: Specifies filename for downloaded Excel file
+              schema:
+                type: string
+                example: 'attachment; filename="invoices_output.xlsx"'
+            X-Processing-Summary:
+              description: JSON summary of processing results
+              schema:
+                type: string
+                example: '{"total": 10, "successful": 9, "failed": 1, "failures": [{"filename": "corrupted.pdf", "invoice_type": "Unknown", "error": "PDF file is corrupted"}]}'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+                description: Excel workbook (.xlsx) with extracted invoice data
+        '400':
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                noFiles:
+                  summary: No files provided
+                  value:
+                    success: false
+                    error:
+                      code: NO_FILES_PROVIDED
+                      message: No PDF files were provided in the request
+                invalidFileType:
+                  summary: Invalid file type
+                  value:
+                    success: false
+                    error:
+                      code: INVALID_FILE_TYPE
+                      message: 'File "document.docx" is not a valid PDF'
+                fileTooLarge:
+                  summary: File too large
+                  value:
+                    success: false
+                    error:
+                      code: FILE_TOO_LARGE
+                      message: 'File "invoice.pdf" exceeds 10MB limit (actual: 15.2MB)'
+                requestTooLarge:
+                  summary: Request too large
+                  value:
+                    success: false
+                    error:
+                      code: REQUEST_TOO_LARGE
+                      message: Total request size (125MB) exceeds 100MB limit
+                tooManyFiles:
+                  summary: Too many files
+                  value:
+                    success: false
+                    error:
+                      code: TOO_MANY_FILES
+                      message: Maximum 100 files allowed per request (received 150)
+                allFilesFailed:
+                  summary: All files failed processing
+                  value:
+                    success: false
+                    error:
+                      code: ALL_FILES_FAILED
+                      message: 'All 5 files failed to process'
+                    failures:
+                      - filename: invoice1.pdf
+                        invoice_type: Unknown
+                        error: Could not detect invoice type
+                      - filename: invoice2.pdf
+                        invoice_type: Unknown
+                        error: PDF file is corrupted or unreadable
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                internalError:
+                  summary: Unexpected error
+                  value:
+                    success: false
+                    error:
+                      code: INTERNAL_ERROR
+                      message: An unexpected error occurred during processing
+
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check endpoint
+      description: Returns API health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  version:
+                    type: string
+                    example: 1.0.0
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              enum:
+                - NO_FILES_PROVIDED
+                - INVALID_FILE_TYPE
+                - FILE_TOO_LARGE
+                - REQUEST_TOO_LARGE
+                - TOO_MANY_FILES
+                - ALL_FILES_FAILED
+                - INTERNAL_ERROR
+              example: INVALID_FILE_TYPE
+            message:
+              type: string
+              description: Human-readable error message
+              example: Only PDF files are supported
+        failures:
+          type: array
+          description: Detailed failure information (only for ALL_FILES_FAILED)
+          items:
+            $ref: '#/components/schemas/FailureDetail'
+
+    FailureDetail:
+      type: object
+      required:
+        - filename
+        - invoice_type
+        - error
+      properties:
+        filename:
+          type: string
+          description: Original filename of the failed PDF
+          example: invoice_123.pdf
+        invoice_type:
+          type: string
+          description: Detected invoice type or "Unknown"
+          enum:
+            - GoogleAds
+            - CM360
+            - DV360
+            - GoogleVAT
+            - Meta
+            - Unknown
+          example: Unknown
+        error:
+          type: string
+          description: Reason for failure
+          example: Could not detect invoice type
+
+    ProcessingSummary:
+      type: object
+      description: Summary of batch processing results (returned in X-Processing-Summary header)
+      required:
+        - total
+        - successful
+        - failed
+        - failures
+      properties:
+        total:
+          type: integer
+          description: Total number of PDFs submitted
+          example: 10
+        successful:
+          type: integer
+          description: Number of successfully processed files
+          example: 9
+        failed:
+          type: integer
+          description: Number of failed files
+          example: 1
+        failures:
+          type: array
+          description: Details of each failed file
+          items:
+            $ref: '#/components/schemas/FailureDetail'
+
+  examples:
+    ProcessingSummaryExample:
+      summary: Processing summary example
+      value:
+        total: 10
+        successful: 8
+        failed: 2
+        failures:
+          - filename: corrupted.pdf
+            invoice_type: Unknown
+            error: PDF file is corrupted or unreadable
+          - filename: unknown_format.pdf
+            invoice_type: Unknown
+            error: Could not detect invoice type
+
