@@ -1,4 +1,4 @@
-fo# Tasks: Flask API for Invoice Processing
+# Tasks: Flask API for Invoice Processing
 
 **Input**: Design documents from `/specs/001-invoice-to-excel/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/api-spec.yaml
