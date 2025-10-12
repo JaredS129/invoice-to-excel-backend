@@ -18,7 +18,7 @@ INVOICES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../in
 class TestGoogleAdsCM360Extractor:
     def test_extract_googleads_invoice(self):
         """Test extraction from GoogleAds invoice"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleAds.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGAds.pdf')
         extractor = GoogleAdsCM360Extractor()
         records = extractor.extract(pdf_path)
 
@@ -67,7 +67,7 @@ class TestDV360Extractor:
 class TestGoogleVATExtractor:
     def test_extract_google_vat_invoice(self):
         """Test extraction from Google VAT invoice"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleVAT.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGVAT.pdf')
         extractor = GoogleVATExtractor()
         records = extractor.extract(pdf_path)
 

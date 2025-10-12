@@ -11,7 +11,9 @@
       "Bash(tasklist)",
       "Bash(taskkill:*)",
       "Bash(source:*)",
-      "Bash(venv/bin/pip install:*)"
+      "Bash(venv/bin/pip install:*)",
+      "Bash(pytest:*)",
+      "Read(///**)"
     ],
     "deny": [],
     "ask": []

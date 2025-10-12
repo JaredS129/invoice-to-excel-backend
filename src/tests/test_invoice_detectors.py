@@ -17,7 +17,7 @@ INVOICES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../in
 class TestGoogleAdsCM360Detector:
     def test_detect_googleads_invoice(self):
         """Test detection of GoogleAds invoice"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleAds.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGAds.pdf')
         result = detect_googleads_cm360(pdf_path)
         assert result in ['GoogleAds', 'CM360'], f'Expected GoogleAds or CM360, got {result}'
 
@@ -37,7 +37,7 @@ class TestDV360Detector:
 
     def test_non_dv360_returns_unknown(self):
         """Test that non-DV360 PDF returns Unknown"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleAds.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGAds.pdf')
         result = detect_dv360(pdf_path)
         assert result == 'Unknown', f'Expected Unknown for non-DV360 PDF, got {result}'
 
@@ -45,13 +45,13 @@ class TestDV360Detector:
 class TestGoogleVATDetector:
     def test_detect_google_vat_invoice(self):
         """Test detection of Google VAT invoice"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleVAT.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGVAT.pdf')
         result = detect_google_vat(pdf_path)
         assert result == 'GoogleVAT', f'Expected GoogleVAT, got {result}'
 
     def test_non_vat_returns_unknown(self):
         """Test that non-VAT PDF returns Unknown"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleAds.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGAds.pdf')
         result = detect_google_vat(pdf_path)
         assert result == 'Unknown', f'Expected Unknown for non-VAT PDF, got {result}'
 
@@ -65,7 +65,7 @@ class TestMetaDetector:
 
     def test_non_meta_returns_unknown(self):
         """Test that non-Meta PDF returns Unknown"""
-        pdf_path = os.path.join(INVOICES_DIR, 'Example_GoogleAds.pdf')
+        pdf_path = os.path.join(INVOICES_DIR, 'Example_GGAds.pdf')
         result = detect_meta(pdf_path)
         assert result == 'Unknown', f'Expected Unknown for non-Meta PDF, got {result}'
 
