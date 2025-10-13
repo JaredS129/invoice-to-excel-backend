@@ -13,7 +13,10 @@
       "Bash(source:*)",
       "Bash(venv/bin/pip install:*)",
       "Bash(pytest:*)",
-      "Read(///**)"
+      "Read(///**)",
+      "Read(//tmp/**)",
+      "Bash(cat:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []
