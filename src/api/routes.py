@@ -95,7 +95,11 @@ def process_invoices():
                     },
                     'failures': [f.to_dict() for f in result.failures]
                 }
-                return jsonify(error_response), 400
+
+                # Create response with X-Processing-Summary header
+                response = jsonify(error_response)
+                response.headers['X-Processing-Summary'] = result.to_summary_json()
+                return response, 400
 
             # Read Excel file into memory before temp dir cleanup
             # This prevents Windows file locking issues

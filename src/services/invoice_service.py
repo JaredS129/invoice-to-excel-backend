@@ -2,7 +2,7 @@
 from typing import List
 from src.process_invoices import InvoiceProcessor
 from src.excel_writer import ExcelWriter
-from src.models.invoice_result import BatchProcessingResult, FailureDetail
+from src.models.invoice_result import BatchProcessingResult, FailureDetail, FileProcessingDetail
 
 
 class InvoiceService:
@@ -25,6 +25,7 @@ class InvoiceService:
         """
         all_records = []
         failures = []
+        file_details = []
 
         # Process each PDF
         for pdf_path in pdf_paths:
@@ -37,21 +38,49 @@ class InvoiceService:
 
                 if result['success']:
                     # Add records to aggregated list
-                    all_records.extend(result['records'])
-                else:
-                    # Record failure
-                    failures.append(FailureDetail(
+                    records = result['records']
+                    all_records.extend(records)
+
+                    # Track successful processing
+                    file_details.append(FileProcessingDetail(
                         filename=filename,
                         invoice_type=result.get('invoice_type', 'Unknown'),
-                        error=result.get('error', 'Unknown error')
+                        status='success',
+                        records_extracted=len(records)
+                    ))
+                else:
+                    # Record failure
+                    error_msg = result.get('error', 'Unknown error')
+                    invoice_type = result.get('invoice_type', 'Unknown')
+
+                    failures.append(FailureDetail(
+                        filename=filename,
+                        invoice_type=invoice_type,
+                        error=error_msg
+                    ))
+
+                    file_details.append(FileProcessingDetail(
+                        filename=filename,
+                        invoice_type=invoice_type,
+                        status='failed',
+                        error=error_msg
                     ))
 
             except Exception as e:
                 # Catch any unexpected errors
+                error_msg = f'Unexpected error: {str(e)}'
+
                 failures.append(FailureDetail(
                     filename=filename,
                     invoice_type='Unknown',
-                    error=f'Unexpected error: {str(e)}'
+                    error=error_msg
+                ))
+
+                file_details.append(FileProcessingDetail(
+                    filename=filename,
+                    invoice_type='Unknown',
+                    status='failed',
+                    error=error_msg
                 ))
 
         # Write Excel file if we have any records
@@ -78,5 +107,6 @@ class InvoiceService:
             successful=successful,
             failed=failed,
             failures=failures,
+            files=file_details,
             output_path=excel_path
         )
